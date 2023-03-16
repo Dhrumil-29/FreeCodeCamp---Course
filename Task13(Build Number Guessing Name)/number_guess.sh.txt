@@ -1,0 +1,64 @@
+#!/bin/bash
+PSQL="psql --username=freecodecamp --dbname=number_guess -t --no-align -c"
+
+echo -e "\nEnter your username:"
+read NAME
+
+USERNAME=$($PSQL "select name from user_info where name='$NAME'")
+GAMES_PLAYED=$($PSQL "select played_games from user_info where name='$USER_NAME'")
+BEST_GAME=$($PSQL "select lowest_time from user_info where name='$USER_NAME'")
+
+if [[ -z $USERNAME ]]
+then
+  INSERT_USER_DATA=$($PSQL "insert into user_info(name) values('$NAME')")
+  USERNAME=$($PSQL "select name from user_info where name='$NAME'")
+  echo -e "Welcome, $NAME! It looks like this is your first time here."
+else
+  echo -e "Welcome back, $NAME! You have played $GAMES_PLAYED games, and your best game took $BEST_GAME guesses."
+fi
+
+# generate Secret random number
+SECRETE_NUMBER=$(($RANDOM % 1000 + 1))
+GUESS_NUMBER=-1;
+NUMBER_OF_GUESS=0;
+
+until [ $SECRETE_NUMBER = $GUESS_NUMBER ]
+do
+  #increase guess number
+  NUMBER_OF_GUESS=$((NUMBER_OF_GUESS+1))
+  # guess number
+  echo -e "\nGuess the secret number between 1 and 1000:"
+  read GUESS_NUMBER
+
+
+  # input is not integer
+  if [[ ! $GUESS_NUMBER =~ ^[0-9]+$ ]]
+  then
+    echo -e "\nThat is not an integer, guess again:"
+  elif [[ $GUESS_NUMBER -gt $SECRETE_NUMBER ]]
+  then  
+    # if guess is higher
+    echo -e "\nIt's higher than that, guess again:"
+  elif [[ $GUESS_NUMBER -lt $SECRETE_NUMBER ]]
+  then
+    # if guess is lower
+    echo -e "\nIt's lower than that, guess again:"
+  fi
+done
+
+# get played_games
+PLAYED_GAME=$($PSQL "select played_games from user_info where name='$USER_NAME'")
+
+# get best_game
+BEST_SCORE=$($PSQL "select lowest_time from user_info where name='$USER_NAME'")
+
+# update play games
+UPDATE_PLAYED_GAMES=$($PSQL "update user_info set played_games=$PLAYED_GAME+1")
+
+# update best score
+if [ -z $BEST_SCORE ] || [ $NUMBER_OF_GUESS -lt $BEST_SCORE ]
+then
+  UPDATE_PLAYED_GAMES=$($PSQL "update user_info set lowest_time=$NUMBER_OF_GUESS")
+fi
+
+echo -e "\nYou guessed it in $NUMBER_OF_GUESS tries. The secret number was $SECRETE_NUMBER. Nice job!"
